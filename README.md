@@ -63,8 +63,8 @@ Make sure you have Flutter SDK installed and set up. If not, follow the [Flutter
 | Student ID | Name              | Section | GitHub Username |
 |------------|-------------------|--------|------------------|
 | 202201254  | Husain Maki       | 2      | @7ax |
-| 202100358  | Husain Merza      | 2      | @unknown         |
-| 202102423  | Ali Abuhamad      | 2      | @Ali-code77 |
+| 202100358  | Husain Merza      | 2      | @Husain1771-2         |
+| 202102423  | Ali Abuhamad      | 2      | @Ali-code75 |
 | 202105051  | Husain Alabed     | 2      | @HusainNit |
 | 202107999  | Mohamed Khalaf    | 1      | @mjkhalaf1 |
 
@@ -91,4 +91,3 @@ Make sure you have Flutter SDK installed and set up. If not, follow the [Flutter
 ## 📄 License
 
 This project is for educational purposes only under University of Bahrain ITCS444.
-# car_insurance_flutter_app
