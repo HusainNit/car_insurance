@@ -1,8 +1,13 @@
+// lib/features/claims/ui/claim_info_screen.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:car_insurance_app/core/widgets/ui_helpers.dart';
+import 'package:intl/intl.dart';
+
 import '../models/claim_model.dart';
 import 'damage_location_screen.dart';
-import 'package:car_insurance_app/core/constants.dart';
+import '../../../core/constants.dart';
+import '../../../core/widgets/ui_helpers.dart';
 
 class ClaimInfoScreen extends StatefulWidget {
   const ClaimInfoScreen({super.key});
@@ -12,165 +17,227 @@ class ClaimInfoScreen extends StatefulWidget {
 }
 
 class _ClaimInfoScreenState extends State<ClaimInfoScreen> {
-  final _fKey = GlobalKey<FormState>();
-  final _vin = TextEditingController();
-  final _policy = TextEditingController();
-  final _loc = TextEditingController();
-  final _desc = TextEditingController();
-  final _price = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  // Controllers for all fields, including policy
+  final _policyController = TextEditingController();
+  final _locController = TextEditingController();
+  final _descController = TextEditingController();
+  final _priceController = TextEditingController();
+
   DateTime? _date;
   TimeOfDay? _time;
-  bool _low = true;
+
+  late Future<List<String>> _vinsFuture;
+  String? _selectedVin;
+
+  @override
+  void initState() {
+    super.initState();
+    _vinsFuture = FirebaseFirestore.instance
+        .collection('vehicles')
+        .orderBy('vin')
+        .get()
+        .then((snap) => snap.docs.map((d) => d['vin'] as String).toList());
+  }
 
   @override
   void dispose() {
-    _vin.dispose();
-    _policy.dispose();
-    _loc.dispose();
-    _desc.dispose();
-    _price.dispose();
+    _policyController.dispose();
+    _locController.dispose();
+    _descController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: customAppBar(context, 'Claim Information'),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: Form(
-            key: _fKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 10),
-                customInputField('VIN Number', _vin),
-                const SizedBox(height: 18),
-                customInputField('Policy Number', _policy),
-                const SizedBox(height: 18),
-                customInputField('Accident Location', _loc,
-                    suffix: const Icon(Icons.place, color: accentColor)),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: customAppBar(context, 'Submit Accident'),
+      body: FutureBuilder<List<String>>(
+        future: _vinsFuture,
+        builder: (ctx, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return customLoadingSpinner();
+          }
+          if (snap.hasError) {
+            return Center(child: Text('Failed to load vehicles'));
+          }
+          final vins = snap.data!;
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  // VIN dropdown
+                  DropdownButtonFormField<String>(
+                    value: _selectedVin,
+                    decoration: _fieldDeco('Select Vehicle (VIN)'),
+                    items: vins.map((vin) {
+                      return DropdownMenuItem(value: vin, child: Text(vin));
+                    }).toList(),
+                    onChanged: (vin) async {
+                      setState(() => _selectedVin = vin);
+                      _policyController.clear();
+                      if (vin != null) {
+                        final req = await FirebaseFirestore.instance
+                            .collection('InsuranceReq')
+                            .where('vehicleId', isEqualTo: vin)
+                            .limit(1)
+                            .get();
+                        if (req.docs.isNotEmpty) {
+                          final pd = req.docs.first.data()['policyDetails']
+                              as Map<String, dynamic>;
+                          _policyController.text = pd['policyNum'] as String;
+                        }
+                      }
+                    },
+                    validator: (v) =>
+                        v == null ? 'Please choose a vehicle' : null,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Policy number (read-only)
+                  TextFormField(
+                    controller: _policyController,
+                    readOnly: true,
+                    decoration: _fieldDeco('Policy Number'),
+                    validator: (_) => _policyController.text.isEmpty
+                        ? 'No policy found'
+                        : null,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Accident location
+                  customInputField(
+                    'Accident Location',
+                    _locController,
+                    suffix: const Icon(Icons.place, color: accentColor),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Date & Time
+                  Row(children: [
                     Expanded(
-                      child: datePickerField(
+                      child: _datePicker(
                         context,
                         'Date',
-                        TextEditingController(
-                          text: _date == null
-                              ? ''
-                              : '${_date!.year}-${_date!.month.toString().padLeft(2, '0')}-${_date!.day.toString().padLeft(2, '0')}',
-                        ),
+                        _date == null
+                            ? ''
+                            : DateFormat('yyyy-MM-dd').format(_date!),
                         () async {
-                          final p = await showDatePicker(
-                              context: context,
-                              initialDate: _date ?? DateTime.now(),
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime.now());
-                          if (p != null) setState(() => _date = p);
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _date ?? DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null) setState(() => _date = picked);
                         },
                       ),
                     ),
-                    const SizedBox(width: 18),
+                    const SizedBox(width: 16),
                     Expanded(
-                      child: datePickerField(
+                      child: _datePicker(
                         context,
                         'Time',
-                        TextEditingController(
-                            text: _time?.format(context) ?? ''),
+                        _time?.format(context) ?? '',
                         () async {
-                          final p = await showTimePicker(
-                              context: context,
-                              initialTime: _time ?? TimeOfDay.now());
-                          if (p != null) setState(() => _time = p);
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: _time ?? TimeOfDay.now(),
+                          );
+                          if (picked != null) setState(() => _time = picked);
                         },
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                customInputField('Short Description', _desc, maxLines: 3),
-                const SizedBox(height: 18),
-                customInputField(
-                  'Estimated Repair Cost (BHD)',
-                  _price,
-                  keyboardType: TextInputType.number,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Enter a value';
-                    final n = double.tryParse(v);
-                    if (n == null || n <= 0) return 'Enter a valid number';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                _damageValueToggle(),
-                const SizedBox(height: 34),
-                customFilledButton('Next  ››', _submit),
-                const SizedBox(height: 24),
-              ],
+                  ]),
+
+                  const SizedBox(height: 16),
+
+                  // Description
+                  customInputField('Short Description', _descController,
+                      maxLines: 3),
+
+                  const SizedBox(height: 16),
+
+                  // Repair cost
+                  customInputField(
+                    'Estimated Repair Cost (BHD)',
+                    _priceController,
+                    keyboardType: TextInputType.number,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Enter a repair cost';
+                      }
+                      final n = double.tryParse(v);
+                      if (n == null || n <= 0) {
+                        return 'Enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  customFilledButton('Next ››', _onNext),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
-          ),
-        ),
-      );
-
-  Widget _damageValueToggle() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Expected Damage Value',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
-          Container(
-            decoration: BoxDecoration(
-                color: const Color(0xFF272727),
-                borderRadius: BorderRadius.circular(32)),
-            padding: const EdgeInsets.all(4),
-            child: Row(children: [
-              _opt('≤ 500 BHD', true),
-              _opt('> 500 BHD', false),
-            ]),
-          ),
-        ],
-      );
-
-  Widget _opt(String t, bool low) {
-    final sel = _low == low;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _low = low),
-        child: Container(
-          height: 50,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: sel ? accentColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(28),
-          ),
-          child: Text(t,
-              style: TextStyle(
-                  color: sel ? Colors.black : Colors.white70,
-                  fontWeight: FontWeight.w600)),
-        ),
+          );
+        },
       ),
     );
   }
 
-  void _submit() {
-    if (!_fKey.currentState!.validate()) return;
+  void _onNext() {
+    if (_formKey.currentState?.validate() != true) return;
+    final baseClaim = ClaimModel(
+      vin: _selectedVin!,
+      policy: _policyController.text,
+      location: _locController.text.trim(),
+      description: _descController.text.trim(),
+      date: _date ?? DateTime.now(),
+      time: _time ?? TimeOfDay.now(),
+      repairCost: double.parse(_priceController.text),
+      damagedParts: [], // collected later
+      consumptionRate: 0.10, // default until photos processed
+    );
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DamageLocationScreen(
-          claim: ClaimModel(
-            vin: _vin.text.trim(),
-            policy: _policy.text.trim(),
-            location: _loc.text.trim(),
-            description: _desc.text.trim(),
-            date: _date ?? DateTime.now(),
-            time: _time ?? TimeOfDay.now(),
-            repairCost: double.parse(_price.text),
-            expectedLow: _low,
-          ),
-        ),
+        builder: (_) => DamageLocationScreen(claim: baseClaim),
       ),
     );
   }
+
+  InputDecoration _fieldDeco(String label) => InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: const Color(0xFF282828),
+        labelStyle: const TextStyle(color: Colors.white70),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: accentColor, width: 1.4),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+      );
+
+  Widget _datePicker(
+    BuildContext ctx,
+    String lbl,
+    String txt,
+    VoidCallback onTap,
+  ) =>
+      datePickerField(ctx, lbl, TextEditingController(text: txt), onTap);
 }

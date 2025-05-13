@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
 class ClaimModel {
-  final String vin, policy, location, description;
-  final DateTime date;
-  final TimeOfDay time;
+  final String vin;
+  final String policy;
+  final String location;
+  final String description;
+  final DateTime date;          // accident date
+  final TimeOfDay time;         // accident time
   final double repairCost;
-  final bool expectedLow;
+  final List<String> damagedParts;
+  final double consumptionRate; // 0.10 or 0.15
+  final String status;          // default = Pending
 
   ClaimModel({
     required this.vin,
@@ -15,7 +20,9 @@ class ClaimModel {
     required this.date,
     required this.time,
     required this.repairCost,
-    required this.expectedLow,
+    required this.damagedParts,
+    required this.consumptionRate,
+    this.status = 'Pending',
   });
 
   Map<String, dynamic> toJson() => {
@@ -27,6 +34,8 @@ class ClaimModel {
         'time':
             '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
         'repairCost': repairCost,
-        'expectedLow': expectedLow,
+        'damagedParts': damagedParts,
+        'consumptionRate': consumptionRate,
+        'status': status,
       };
 }

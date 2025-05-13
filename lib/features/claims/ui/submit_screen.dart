@@ -1,6 +1,8 @@
-import 'package:car_insurance_app/core/widgets/ui_helpers.dart';
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+
+import '../../../core/widgets/ui_helpers.dart';
+import '../../../core/constants.dart';
 
 class SubmitScreen extends StatelessWidget {
   final DocumentReference<Map<String, dynamic>> claimDoc;
@@ -8,6 +10,7 @@ class SubmitScreen extends StatelessWidget {
 
   Future<void> _submit(BuildContext context) async {
     await claimDoc.update({
+      'status': 'Pending',
       'submitted': true,
       'submittedAt': FieldValue.serverTimestamp(),
     });
@@ -20,9 +23,8 @@ class SubmitScreen extends StatelessWidget {
             const Text('Your claim has been sent to the insurance company.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
-            child: const Text('OK'),
-          ),
+              onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
+              child: const Text('OK')),
         ],
       ),
     );
@@ -48,8 +50,7 @@ class SubmitScreen extends StatelessWidget {
                   infoRow('Time', data['time']),
                   infoRow('Repair Cost (BHD)',
                       data['repairCost']?.toString() ?? ''),
-                  infoRow('Expected Low',
-                      data['expectedLow'] == true ? 'Yes' : 'No'),
+                  infoRow('Status', data['status']),
                 ]),
                 const SizedBox(height: 20),
                 sectionTitle('Attached Photos'),
@@ -93,10 +94,8 @@ class SubmitScreen extends StatelessWidget {
         bottomNavigationBar: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: customFilledButton(
-              'Submit Claim  ››',
-              () => _submit(context),
-            ),
+            child:
+                customFilledButton('Submit Claim  ››', () => _submit(context)),
           ),
         ),
       );

@@ -19,8 +19,7 @@ class CustomBottomNav extends StatelessWidget {
       destinations: const [
         NavigationDestination(
             icon: Icon(Icons.time_to_leave), label: 'Vehicles'),
-        NavigationDestination(
-            icon: Icon(Icons.car_rental), label: 'RegisterVehicles'),
+        NavigationDestination(icon: Icon(Icons.car_rental), label: 'Register'),
         NavigationDestination(icon: Icon(Icons.article), label: 'Claims'),
         NavigationDestination(icon: Icon(Icons.policy), label: 'Policies'),
         NavigationDestination(

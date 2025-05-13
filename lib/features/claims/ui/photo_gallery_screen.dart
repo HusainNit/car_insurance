@@ -54,7 +54,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Well Done, All Damage Photos Taken.',
+                  const Text('All Damage Photos Taken.',
                       style:
                           TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
@@ -77,8 +77,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                         if (i < urls.length) {
                           return ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child:
-                                Image.network(urls[i], fit: BoxFit.cover),
+                            child: Image.network(urls[i], fit: BoxFit.cover),
                           );
                         }
                         return InkWell(
@@ -151,8 +150,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                     () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            SubmitScreen(claimDoc: widget.claimDoc),
+                        builder: (_) => SubmitScreen(claimDoc: widget.claimDoc),
                       ),
                     ),
                   ),
