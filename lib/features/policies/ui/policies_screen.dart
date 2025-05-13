@@ -8,7 +8,7 @@ class PoliciesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MainScaffold(
-      selectedIndex: 2,
+      selectedIndex: 3,
       title: 'Your Policies',
       body: Center(
         child: Text(

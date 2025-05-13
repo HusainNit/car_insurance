@@ -56,12 +56,15 @@ class MainScaffold extends StatelessWidget {
               Navigator.pushReplacementNamed(context, '/vehicles');
               break;
             case 1:
-              Navigator.pushReplacementNamed(context, '/claims');
+              Navigator.pushReplacementNamed(context, '/registerVehicles');
               break;
             case 2:
-              Navigator.pushReplacementNamed(context, '/policies');
+              Navigator.pushReplacementNamed(context, '/claims');
               break;
             case 3:
+              Navigator.pushReplacementNamed(context, '/policies');
+              break;
+            case 4:
               Navigator.pushReplacementNamed(context, '/profile');
               break;
           }

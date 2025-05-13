@@ -12,7 +12,7 @@ class ClaimsOverviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MainScaffold(
-      selectedIndex: 1,
+      selectedIndex: 2,
       title: 'Your Claims',
       body: Stack(
         children: [

@@ -143,8 +143,8 @@ Widget customInputField(
       maxLines: maxLines,
       keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white),
-      validator: validator ??
-          (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+      validator:
+          validator ?? (v) => v == null || v.trim().isEmpty ? 'Required' : null,
       decoration: InputDecoration(
         labelText: label,
         suffixIcon: suffix,

@@ -8,7 +8,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MainScaffold(
-      selectedIndex: 3,
+      selectedIndex: 4,
       title: 'Your Profile',
       body: Center(
         child: Text(
