@@ -1,11 +1,16 @@
+import 'dart:io';
+import 'dart:math';
 import 'package:car_insurance_app/core/constants.dart';
 import 'package:car_insurance_app/core/widgets/ui_helpers.dart';
 import 'package:car_insurance_app/core/widgets/main_scaffold.dart';
 import 'package:car_insurance_app/features/registerVehicles/services/photo.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:car_insurance_app/utils/cloudinary_helper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class VehicleRegistration extends StatefulWidget {
   const VehicleRegistration({super.key});
@@ -15,11 +20,10 @@ class VehicleRegistration extends StatefulWidget {
 }
 
 class _VehicleRegistrationState extends State<VehicleRegistration> {
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _CustomerNameController = TextEditingController();
   final TextEditingController _VehicleModelController = TextEditingController();
-  final TextEditingController _VehicleChassisNumberController =
-      TextEditingController();
+
   final TextEditingController _VehicleRegistrationNumberController =
       TextEditingController();
   final TextEditingController _VehicleManufacturingYearController =
@@ -30,9 +34,8 @@ class _VehicleRegistrationState extends State<VehicleRegistration> {
   final TextEditingController _CarPriceWhenNewController =
       TextEditingController();
   final TextEditingController _CarVINController = TextEditingController();
-  final String _insuranceStatus = "Pending";
-  String _insuranceType = "newInsurance";
-  final String _ownerID = ""; // at login
+
+  final user = FirebaseAuth.instance.currentUser;
   dynamic _imageFile;
   String? _photoUrl;
 
@@ -61,95 +64,6 @@ class _VehicleRegistrationState extends State<VehicleRegistration> {
     return snapshot.docs.isEmpty;
   }
 
-// Future<String?> validateFields() async {
-//   // VIN validation
-//   if (_CarVINController.text.isEmpty) {
-//     return 'VIN is required';
-//   }
-//   if (!await isVinUnique(_CarVINController.text)) {
-//     return 'This VIN already exists';
-//   }
-
-//   // Price validation
-//   if (_CarPriceWhenNewController.text.isEmpty) {
-//     return 'Price is required';
-//   }
-//   final price = int.tryParse(_CarPriceWhenNewController.text);
-//   if (price == null || price <= 0) {
-//     return 'Please enter a valid price';
-//   }
-
-//   // Year validation
-//   if (_VehicleManufacturingYearController.text.isEmpty) {
-//     return 'Manufacturing year is required';
-//   }
-//   final year = int.tryParse(_VehicleManufacturingYearController.text);
-//   final currentYear = DateTime.now().year;
-//   if (year == null || year < 1900 || year > currentYear + 1) {
-//     return 'Please enter a valid manufacturing year';
-//   }
-
-//   // Age validation
-//   if (_DriversAgeController.text.isEmpty) {
-//     return 'Driver age is required';
-//   }
-//   final age = int.tryParse(_DriversAgeController.text);
-//   if (age == null || age < 18 || age > 100) {
-//     return 'Driver must be between 18 and 100 years old';
-//   }
-
-//   // Passengers validation
-//   if (_NumberOfPassengersController.text.isEmpty) {
-//     return 'Number of passengers is required';
-//   }
-//   final passengers = int.tryParse(_NumberOfPassengersController.text);
-//   if (passengers == null || passengers <= 0 || passengers > 50) {
-//     return 'Please enter a valid number of passengers';
-//   }
-
-//   // Other required fields
-//   if (_CustomerNameController.text.isEmpty ||
-//       _VehicleModelController.text.isEmpty ||
-//       _VehicleChassisNumberController.text.isEmpty ||
-//       _VehicleRegistrationNumberController.text.isEmpty) {
-//     return 'All fields are required';
-//   }
-
-//   return null;
-// }
-  Future<void> createInsuranceRequest() async {
-    try {
-      // Generate a random insurance ID or let Firebase auto-generate it
-      DocumentReference docRef =
-          FirebaseFirestore.instance.collection("InsuranceReq").doc();
-
-      // Get current date for policy dates
-      DateTime now = DateTime.now();
-      DateTime endDate = now.add(const Duration(days: 365)); // 1 year policy
-
-      Map<String, dynamic> insuranceData = {
-        "adminApproval": false,
-        "coverageDetails": "",
-        "insuranceOffers": [""],
-        "paymentStatus": "Pending",
-        "policyDetails": {
-          "endDate": endDate.toIso8601String(),
-          "policyNum": docRef.id,
-          "startDate": now.toIso8601String(),
-        },
-        "userId": "_ownerID", // Replace with actual user ID
-        "vehicleId": _CarVINController.text,
-      };
-
-      await docRef.set(insuranceData);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text("Error creating insurance request: ${e.toString()}")),
-      );
-    }
-  }
-
   Future<void> sendDataToDB() async {
     try {
       // First upload the photo if available
@@ -167,22 +81,18 @@ class _VehicleRegistrationState extends State<VehicleRegistration> {
 
       Map<String, dynamic> Data = {
         "vin": _CarVINController.text,
-        "chassisNum": _VehicleChassisNumberController.text,
-        "currentPrice": calculateDepreciatedPrice(),
         "driverAge": _DriversAgeController.text,
-        "insuranceStatus": _insuranceStatus,
-        "insuranceType": _insuranceType,
         "manufacturingYear": _VehicleManufacturingYearController.text,
-        "model": _VehicleModelController.text,
-        "ownerId": "_ownerID",
+        "carModel": _VehicleModelController.text,
+        "userId": user?.uid ?? "",
+        "insured": false,
         "passengersNum": _NumberOfPassengersController.text,
         "photos": _photoUrl ?? "", // Now includes the Cloudinary URL
         "priceWhenNew": _CarPriceWhenNewController.text,
-        "registrationNum": _VehicleRegistrationNumberController.text,
+        "registrationNumber": _VehicleRegistrationNumberController.text,
       };
 
       await docRef.set(Data);
-      await createInsuranceRequest();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Vehicle registered successfully")),
       );
@@ -284,9 +194,8 @@ class _VehicleRegistrationState extends State<VehicleRegistration> {
                   _NumberOfPassengersController,
                   keyboardType: TextInputType.number,
                   validator: (value) {
-                    if (value?.isEmpty ?? true) {
+                    if (value?.isEmpty ?? true)
                       return 'Number of passengers is required';
-                    }
                     final passengers = int.tryParse(value!);
                     if (passengers == null ||
                         passengers <= 0 ||
@@ -297,13 +206,6 @@ class _VehicleRegistrationState extends State<VehicleRegistration> {
                   },
                 ),
                 const SizedBox(height: 16),
-                customInputField(
-                  'Chassis Number',
-                  _VehicleChassisNumberController,
-                  validator: (value) => value?.isEmpty ?? true
-                      ? 'Chassis number is required'
-                      : null,
-                ),
                 const SizedBox(height: 16),
                 customInputField(
                   'Registration Number',
@@ -318,9 +220,8 @@ class _VehicleRegistrationState extends State<VehicleRegistration> {
                   _VehicleManufacturingYearController,
                   keyboardType: TextInputType.number,
                   validator: (value) {
-                    if (value?.isEmpty ?? true) {
+                    if (value?.isEmpty ?? true)
                       return 'Manufacturing year is required';
-                    }
                     final year = int.tryParse(value!);
                     final currentYear = DateTime.now().year;
                     if (year == null || year < 1900 || year > currentYear + 1) {
@@ -329,46 +230,24 @@ class _VehicleRegistrationState extends State<VehicleRegistration> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF282828),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: DropdownButtonFormField<String>(
-                    value: _insuranceType,
-                    dropdownColor: const Color(0xFF282828),
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      labelText: 'Insurance Type',
-                      labelStyle: TextStyle(color: Colors.white70),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'newInsurance',
-                        child: Text('New Insurance',
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                      DropdownMenuItem(
-                        value: 'renewalInsurance',
-                        child: Text('Renewal Insurance',
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
-                    onChanged: (String? newValue) {
-                      setState(() => _insuranceType = newValue!);
-                    },
-                  ),
-                ),
                 const SizedBox(height: 24),
                 customFilledButton(
                   'Register Vehicle',
                   () async {
-                    if (_formKey.currentState!.validate()) {
-                      sendDataToDB();
+                    if (await _formKey.currentState!.validate()) {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (BuildContext context) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        },
+                      );
+
+                      await sendDataToDB();
+
+                      Navigator.pop(context); // Dismiss the loading spinner
                     }
                   },
                 ),

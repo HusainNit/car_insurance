@@ -1,3 +1,4 @@
+import 'package:car_insurance_app/features/vehicles/ui/editCarInfo.dart';
 import 'package:car_insurance_app/features/vehicles/ui/vehiclesDetails.dart';
 import 'package:flutter/material.dart';
 import 'package:car_insurance_app/core/widgets/main_scaffold.dart';
@@ -17,7 +18,7 @@ class VehiclesScreen extends StatelessWidget {
         child: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('vehicles')
-              .orderBy('model')
+              .orderBy('carModel')
               .snapshots(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
@@ -58,10 +59,10 @@ class VehiclesScreen extends StatelessWidget {
                             builder: (BuildContext context) {
                               return AlertDialog(
                                 backgroundColor: const Color(0xFF282828),
-                                title: const Text('Delete Vehicle',
+                                title: const Text('Vehicle Options',
                                     style: TextStyle(color: Colors.white)),
                                 content: const Text(
-                                    'Are you sure you want to delete this vehicle?',
+                                    'What would you like to do with this vehicle?',
                                     style: TextStyle(color: Colors.white70)),
                                 actions: [
                                   TextButton(
@@ -69,6 +70,24 @@ class VehiclesScreen extends StatelessWidget {
                                         style: TextStyle(color: accentColor)),
                                     onPressed: () =>
                                         Navigator.of(context).pop(),
+                                  ),
+                                  TextButton(
+                                    child: const Text('Edit',
+                                        style: TextStyle(color: Colors.blue)),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              EditVehicleScreen(
+                                            vehicleData: data,
+                                            vehicleId:
+                                                snapshot.data!.docs[index].id,
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                   TextButton(
                                     child: const Text('Delete',
@@ -108,34 +127,71 @@ class VehiclesScreen extends StatelessWidget {
                                     color: accentColor),
                               ),
                               title: Text(
-                                data['model'] ?? 'Vehicle',
+                                data['carModel'] ?? 'Vehicle',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               subtitle: Text(
-                                'Registration: ${data['registrationNum']}',
+                                'Registration: ${data['registrationNumber']}',
                                 style: const TextStyle(color: Colors.grey),
                               ),
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: data['insuranceStatus'] == 'Pending'
-                                      ? Colors.orange
-                                      : Colors.green,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  data['insuranceStatus'] ?? 'Status',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
+                              trailing: StreamBuilder<QuerySnapshot>(
+                                stream: FirebaseFirestore.instance
+                                    .collection('InsuranceReq')
+                                    .where('vehicleId', isEqualTo: data['vin'])
+                                    .limit(1)
+                                    .snapshots(),
+                                builder: (context, insuranceSnapshot) {
+                                  String status = 'Not Processed';
+                                  Color statusColor = Colors.grey;
+
+                                  if (insuranceSnapshot.hasData &&
+                                      insuranceSnapshot.data!.docs.isNotEmpty) {
+                                    final insuranceData = insuranceSnapshot
+                                        .data!.docs.first
+                                        .data() as Map<String, dynamic>;
+
+                                    status = insuranceData['insuranceStatus'] ??
+                                        'Not Processed';
+
+                                    switch (status) {
+                                      case 'Paid':
+                                        statusColor = Colors.green;
+                                        break;
+                                      case 'Pending':
+                                        statusColor = Colors.orange;
+                                        break;
+                                      case 'Offering':
+                                        statusColor = Colors.blue;
+                                        break;
+                                      case 'Unpaid':
+                                        statusColor = Colors.red;
+                                        break;
+                                      default:
+                                        statusColor = Colors.grey;
+                                    }
+                                  }
+
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: statusColor,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      status,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ],
@@ -158,7 +214,7 @@ class VehiclesScreen extends StatelessWidget {
                                   color: Colors.white, size: 16),
                               SizedBox(width: 4),
                               Text(
-                                'Hold to delete',
+                                'Hold to delete or edit',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
