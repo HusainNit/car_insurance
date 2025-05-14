@@ -1,6 +1,6 @@
 // lib/features/claims/ui/claims_overview_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -21,104 +21,55 @@ class _ClaimsOverviewScreenState extends State<ClaimsOverviewScreen> {
   String selectedStatus = 'All';
   static const statuses = ['All', 'Pending', 'Approved', 'Rejected'];
 
+  String? _role; // 'admin' | 'customer'
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRole();
+  }
+
+  Future<void> _loadRole() async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final snap =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    setState(() => _role =
+        (snap.data()?['userType'] ?? snap.data()?['role'] ?? 'customer')
+            .toString());
+  }
+
+  Query<Map<String, dynamic>> _baseQuery() =>
+      FirebaseFirestore.instance.collection('claims');
+
   @override
   Widget build(BuildContext context) {
+    if (_role == null) return const Center(child: CircularProgressIndicator());
+
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final query = _role == 'admin'
+        ? _baseQuery().orderBy('submittedAt', descending: true)
+        : _baseQuery().where('createdBy', isEqualTo: uid);
+
     return MainScaffold(
       selectedIndex: 2,
-      title: 'All Claims',
+      title: _role == 'admin' ? 'All Claims' : 'My Claims',
       body: Stack(
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 12),
-
-              // ─── Subtitle ───────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'Review and manage your claims',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                    letterSpacing: 0.5,
-                  ),
-                ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text('Review and manage your claims',
+                    style: TextStyle(fontSize: 14, color: Colors.white70)),
               ),
-
               const SizedBox(height: 12),
-
-              // ─── Status Filter Chips ─────────────────────
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: statuses.map((status) {
-                    final isSelected = status == selectedStatus;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: Text(status),
-                        selected: isSelected,
-                        onSelected: (_) =>
-                            setState(() => selectedStatus = status),
-                        showCheckmark: false, // ← disable the tick
-                        backgroundColor: Colors.white12,
-                        selectedColor: accentColor,
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.black : Colors.white70,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-
+              _statusChips(),
               const SizedBox(height: 12),
-
-              // ─── Claims List ─────────────────────────────
-              Expanded(
-                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: FirebaseFirestore.instance
-                      .collection('claims')
-                      .orderBy('submittedAt', descending: true)
-                      .snapshots(),
-                  builder: (ctx, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return customLoadingSpinner();
-                    }
-                    final docs = snap.data?.docs ?? [];
-                    final filtered = selectedStatus == 'All'
-                        ? docs
-                        : docs.where((doc) {
-                            final st =
-                                (doc.data()['status'] ?? 'Pending').toString();
-                            return st.toLowerCase() ==
-                                selectedStatus.toLowerCase();
-                          }).toList();
-
-                    if (filtered.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'No claims found.',
-                          style: TextStyle(color: Colors.white70, fontSize: 16),
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                      itemCount: filtered.length,
-                      itemBuilder: (_, i) => _ClaimCard(doc: filtered[i]),
-                    );
-                  },
-                ),
-              ),
+              Expanded(child: _claimsList(query)),
             ],
           ),
-
-          // ─── New Claim FAB ────────────────────────────
           Positioned(
             bottom: 16,
             right: 16,
@@ -127,9 +78,8 @@ class _ClaimsOverviewScreenState extends State<ClaimsOverviewScreen> {
                 context,
                 MaterialPageRoute(builder: (_) => const ClaimInfoScreen()),
               ),
-              backgroundColor: accentColor.withOpacity(0.95),
+              backgroundColor: accentColor, 
               foregroundColor: Colors.black,
-              elevation: 4,
               mini: true,
               child: const Icon(Icons.add, size: 24),
             ),
@@ -138,9 +88,76 @@ class _ClaimsOverviewScreenState extends State<ClaimsOverviewScreen> {
       ),
     );
   }
+
+  Widget _statusChips() => SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: statuses.map((s) {
+            final sel = s == selectedStatus;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                label: Text(s),
+                selected: sel,
+                onSelected: (_) => setState(() => selectedStatus = s),
+                showCheckmark: false,
+                backgroundColor: Colors.white12,
+                selectedColor: accentColor,
+                labelStyle: TextStyle(
+                  color: sel ? Colors.black : Colors.white70,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      );
+
+  Widget _claimsList(Query<Map<String, dynamic>> query) =>
+      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: query.snapshots(),
+        builder: (_, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return customLoadingSpinner();
+          }
+          if (snap.hasError) {
+            return Center(
+                child: Text('Firestore error: ${snap.error}',
+                    style: const TextStyle(color: Colors.redAccent)));
+          }
+
+          var docs = snap.data?.docs ?? [];
+
+          docs.sort((a, b) {
+            final tsA = a['submittedAt'] as Timestamp?;
+            final tsB = b['submittedAt'] as Timestamp?;
+            return (tsB?.seconds ?? 0).compareTo(tsA?.seconds ?? 0);
+          });
+
+          if (selectedStatus != 'All') {
+            docs = docs.where((d) {
+              final s = (d['status'] ?? 'Pending').toString().toLowerCase();
+              return s == selectedStatus.toLowerCase();
+            }).toList();
+          }
+
+          if (docs.isEmpty) {
+            return const Center(
+                child: Text('No claims found.',
+                    style: TextStyle(color: Colors.white70, fontSize: 16)));
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+            itemCount: docs.length,
+            itemBuilder: (_, i) => _ClaimCard(doc: docs[i]),
+          );
+        },
+      );
 }
 
-/// Single Claim Card
+
 class _ClaimCard extends StatelessWidget {
   final QueryDocumentSnapshot<Map<String, dynamic>> doc;
   const _ClaimCard({required this.doc});
@@ -162,55 +179,58 @@ class _ClaimCard extends StatelessWidget {
       child: Card(
         color: const Color(0xFF262626),
         elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => ClaimDetailScreen(claimDoc: doc)),
+            MaterialPageRoute(
+              builder: (_) => ClaimDetailScreen(claimDoc: doc),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Banner + Status Chip
               SizedBox(
                 height: 140,
-                child: Stack(children: [
-                  ClipRRect(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      future: doc.reference
-                          .collection('photos')
-                          .orderBy('ts')
-                          .limit(1)
-                          .get(),
-                      builder: (_, snap) {
-                        if (snap.hasData && snap.data!.docs.isNotEmpty) {
-                          return Image.network(
-                            snap.data!.docs.first['url'] as String,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                          );
-                        }
-                        return Container(color: Colors.grey.shade800);
-                      },
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                      child: FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                        future: doc.reference
+                            .collection('photos')
+                            .orderBy('ts')
+                            .limit(1)
+                            .get(),
+                        builder: (_, snap) {
+                          if (snap.hasData && snap.data!.docs.isNotEmpty) {
+                            return Image.network(
+                              snap.data!.docs.first['url'] as String,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                            );
+                          }
+                          return Container(color: Colors.grey.shade800);
+                        },
+                      ),
                     ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: _StatusChip(status: status),
-                  ),
-                ]),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: _StatusChip(status: status),
+                    ),
+                  ],
+                ),
               ),
-
-              // Body: regNum & location / date & cost
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 child: Row(
                   children: [
-                    // Left: regNum + location
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,14 +256,15 @@ class _ClaimCard extends StatelessWidget {
                         ],
                       ),
                     ),
-
-                    // Right: date & cost
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         _iconText(Icons.calendar_today, dateStr),
                         const SizedBox(height: 8),
-                        _iconText(Icons.attach_money, cost.toStringAsFixed(2)),
+                        _iconText(
+                          Icons.attach_money,
+                          cost.toStringAsFixed(2),
+                        ),
                       ],
                     ),
                   ],
@@ -260,13 +281,14 @@ class _ClaimCard extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: Colors.white60),
           const SizedBox(width: 4),
-          Text(text,
-              style: const TextStyle(color: Colors.white60, fontSize: 12)),
+          Text(
+            text,
+            style: const TextStyle(color: Colors.white60, fontSize: 12),
+          ),
         ],
       );
 }
 
-/// Status Chip Overlay
 class _StatusChip extends StatelessWidget {
   final String status;
   const _StatusChip({required this.status});

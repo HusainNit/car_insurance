@@ -21,7 +21,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String adminName = "Admin";
   int pendingClaims = 0;
   int totalUsers = 0;
-  int activePolicies = 0;
+  int IssuedPolicies = 0;
   int pendingQuotations = 0;
   bool isLoading = true;
 
@@ -54,7 +54,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           }
         }
       }
-
+    
       // Get pending claims count
       QuerySnapshot claimsSnapshot = await _firestore
           .collection('claims')
@@ -69,20 +69,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
       
       // Get active policies count
       QuerySnapshot policiesSnapshot = await _firestore
-          .collection('policies')
-          .where('status', isEqualTo: 'active')
+          .collection('InsuranceReq')
+          .where('insuranceStatus', isEqualTo: 'Approved')
           .get();
 
       // Get pending quotations count
       QuerySnapshot quotationsSnapshot = await _firestore
           .collection('InsuranceReq')
-          .where('adminApproval', isEqualTo: false)
+          .where('insuranceStatus', isEqualTo: 'Requested')
           .get();
+
+     
+       
 
       setState(() {
         pendingClaims = claimsSnapshot.docs.length;
         totalUsers = usersSnapshot.docs.length;
-        activePolicies = policiesSnapshot.docs.length;
+        IssuedPolicies = policiesSnapshot.docs.length;
         pendingQuotations = quotationsSnapshot.docs.length;
         isLoading = false;
       });
@@ -209,8 +212,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         Colors.blue,
                       ),
                       _buildStatCard(
-                        "Active Policies",
-                        activePolicies.toString(),
+                        "Issued Policies",
+                        IssuedPolicies.toString(),
                         Icons.policy,
                         Colors.green,
                       ),
@@ -440,16 +443,19 @@ class _InsuranceQuotationsPageState extends State<InsuranceQuotationsPage> {
   docRef =
       FirebaseFirestore.instance.collection("InsuranceReq").doc(docId);
     try {
-      await docRef.update({
+       docRef.update({
       "insuranceStatus": "Offering",
       "insuranceOffers" : ["Luxury Option:  ${(amount*1.3).toStringAsFixed(1)}","Premium Option:  ${(amount*1.1).toStringAsFixed(1)}","Standard Option:  ${(amount*1).toStringAsFixed(1)}"]
-    });
+    }).whenComplete((){
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Offer Submitted ! " , style: TextStyle(color: Colors.white),), backgroundColor: Colors.greenAccent,)  );
+
+    });
+
       
     } catch (e) {
-      print("$e");
-     
+       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error Encounter" , style: TextStyle(color: Colors.white),), backgroundColor: Colors.redAccent,)  );
+        print("$e");
       
     }
   }
@@ -642,15 +648,18 @@ class _ReviewOffersPageState extends State<ReviewOffersPage> {
   docRef =
       FirebaseFirestore.instance.collection("InsuranceReq").doc(docId);
     try {
-      await docRef.update({
+       docRef.update({
       "insuranceStatus": "Unpaid"
-    });
+    }).whenComplete((){
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Payment Requested ! " , style: TextStyle(color: Colors.white),), backgroundColor: Colors.greenAccent,)  );
+
+    });
+
       
     } catch (e) {
-      print("$e");
-     
+       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error Encounter" , style: TextStyle(color: Colors.white),), backgroundColor: Colors.redAccent,)  );
+        print("$e");
       
     }
   }
@@ -807,13 +816,25 @@ class _InusrancePolicyState extends State<InusrancePolicy> {
   docRef =
       FirebaseFirestore.instance.collection("InsuranceReq").doc(docId);
     try {
-      await docRef.update({
-      "insuranceStatus": "Approved"
+       docRef.update({
+      "insuranceStatus": "Approved",
+      'policyDetails': {
+          'policyNum': docId,
+          'startDate': DateTime.now().toString(),
+          'endDate': DateTime.now().add(const Duration(days: 365)).toString(),
+        }
+    }).whenComplete( (){
+
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Policy Approved ! " , style: TextStyle(color: Colors.white),), backgroundColor: Colors.greenAccent,)  );
+
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Policy Approved ! " , style: TextStyle(color: Colors.white),), backgroundColor: Colors.greenAccent,)  );
+    
+    
+
       
     } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error Encounter" , style: TextStyle(color: Colors.white),), backgroundColor: Colors.redAccent,)  );
       print("$e");
      
       
@@ -908,6 +929,10 @@ class _InusrancePolicyState extends State<InusrancePolicy> {
                           
 
                           customFilledButton("Approve Policy", (){
+
+                            approvePolicy(PaidReview[index].id);
+                            _loadPaidReviews();
+                          
 
 
 

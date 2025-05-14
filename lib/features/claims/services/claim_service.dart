@@ -1,22 +1,36 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/claim_model.dart';
 
-/// Firestore helper for creating a claim and attaching photos.
 class ClaimService {
-  final _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  /// Create a new claim and return its document reference.
   Future<DocumentReference<Map<String, dynamic>>> createClaim(
-          ClaimModel claim) =>
-      _db.collection('claims').add(claim.toJson());
+      ClaimModel claim) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('User not signed in');
+
+    final data = <String, dynamic>{
+      ...claim.toJson(),
+      'createdBy': user.uid,                
+      'submitted': false,
+      'submittedAt': null,
+    };
+
+    return _firestore.collection('claims').add(data);
+  }
 
   Future<void> addPhoto({
     required String docId,
     required String spot,
     required String url,
-  }) =>
-      _db
-          .collection('claims')
-          .doc(docId)
-          .collection('photos')
-          .add({'url': url, 'spot': spot, 'ts': FieldValue.serverTimestamp()});
+  }) async {
+    await _firestore
+        .collection('claims')
+        .doc(docId)
+        .collection('photos')
+        .add({'spot': spot, 'url': url, 'ts': FieldValue.serverTimestamp()});
+  }
 }

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import 'package:car_insurance_app/core/widgets/main_scaffold.dart';
 import 'package:car_insurance_app/core/constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PoliciesScreen extends StatefulWidget {
   const PoliciesScreen({super.key});
@@ -19,6 +20,8 @@ class _PoliciesScreenState extends State<PoliciesScreen> {
   int? _selectedYear;
   List<Map<String, dynamic>> _current = [];
   List<Map<String, dynamic>> _past = [];
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
 
   static final _years = <int?>[
     null,
@@ -28,6 +31,7 @@ class _PoliciesScreenState extends State<PoliciesScreen> {
   @override
   void initState() {
     super.initState();
+   
     _regController.addListener(() {
       Future.delayed(const Duration(milliseconds: 300), _fetchPolicies);
     });
@@ -41,6 +45,8 @@ class _PoliciesScreenState extends State<PoliciesScreen> {
   }
 
   Future<void> _fetchPolicies() async {
+    final User? user = _auth.currentUser;
+
     final now = DateTime.now();
     final query = _regController.text.trim().toLowerCase();
     final vehicles =
@@ -62,6 +68,9 @@ class _PoliciesScreenState extends State<PoliciesScreen> {
       final vin = (m['vehicleId'] as String).toLowerCase();
       final reg = vinMap[vin] ?? '';
       if (reg.isEmpty) continue;
+      if (m['insuranceStatus'] != null && m['insuranceStatus'] != 'Approved') continue;
+
+
 
       final pd = m['policyDetails'] as Map<String, dynamic>? ?? {};
       final start = DateTime.tryParse(pd['startDate'] ?? '');
@@ -73,7 +82,7 @@ class _PoliciesScreenState extends State<PoliciesScreen> {
           (_selectedYear != null && start.year != _selectedYear)) {
         continue;
       }
-
+      
       final rec = {
         'policyNum': num,
         'regNum': reg,
@@ -82,15 +91,22 @@ class _PoliciesScreenState extends State<PoliciesScreen> {
       };
 
       if (end.isAfter(now)) {
-        curr.add(rec);
+          print(user);
+        if(user?.uid == m['userId']) {
+          curr.add(rec);
+        }
       } else {
-        pastl.add(rec);
+          print(user);
+        if(user?.uid == m['userId']) {
+          pastl.add(rec);
+        }
       }
     }
 
     setState(() {
       _current = curr;
       _past = pastl;
+      
     });
   }
 
@@ -99,7 +115,7 @@ class _PoliciesScreenState extends State<PoliciesScreen> {
     return DefaultTabController(
       length: 2,
       child: MainScaffold(
-        selectedIndex: 4,
+        selectedIndex: 3,
         title: 'Your Policies',
         body: Column(
           children: [
