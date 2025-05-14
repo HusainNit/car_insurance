@@ -1,38 +1,49 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
+<html lang="en">
+  <head>
+    <!-- Base path for Flutter web routing -->
+    <base href="/" />
 
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="description" content="Accident & Claims demo app" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+    <!-- iOS meta & icons -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="accident_and_claims" />
+    <link rel="apple-touch-icon" href="icons/Icon-192.png" />
 
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
-  <base href="$FLUTTER_BASE_HREF">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png" />
 
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+    <title>Accident & Claims</title>
+    <link rel="manifest" href="manifest.json" />
 
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="car_insurance_app">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+    <!-- ── OPTIONAL: Firebase Web SDK (remove if using flutterfire_cli) ── -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-analytics.js";
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+      const firebaseConfig = {
+        apiKey: "AIzaSyAZ3_7pF_NC8qrChpW_jsOX8KnS22Hj3vI",
+        authDomain: "appfb-a7bec.firebaseapp.com",
+        projectId: "appfb-a7bec",
+        storageBucket: "appfb-a7bec.firebasestorage.app",
+        messagingSenderId: "785864137651",
+        appId: "1:785864137651:web:2dabc450045e17302909c6",
+        measurementId: "G-SQ0DV0TLHT",
+      };
 
-  <title>car_insurance_app</title>
-  <link rel="manifest" href="manifest.json">
-</head>
-<body>
-  <script src="flutter_bootstrap.js" async></script>
-</body>
+      initializeApp(firebaseConfig);
+      getAnalytics();
+    </script>
+    <!-- ──────────────────────────────────────────────────────────────── -->
+  </head>
+
+  <body>
+    <!-- Flutter web bootstrap -->
+    <script src="flutter_bootstrap.js" async></script>
+  </body>
 </html>
