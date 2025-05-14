@@ -351,3 +351,616 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 }
+
+// Insurance Quotations page
+class InsuranceQuotationsPage extends StatefulWidget {
+  const InsuranceQuotationsPage({super.key});
+
+  @override
+  State<InsuranceQuotationsPage> createState() => _InsuranceQuotationsPageState();
+}
+
+class _InsuranceQuotationsPageState extends State<InsuranceQuotationsPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  List<DocumentSnapshot> insuranceRequests = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInsuranceRequests();
+  }
+
+  Future<void> _loadInsuranceRequests() async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('InsuranceReq')
+          .where('adminApproval', isEqualTo: false)
+          .get();
+
+      setState(() {
+        insuranceRequests = snapshot.docs;
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error loading insurance requests: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  // Calculate quotation based on car price, depreciation, and offer tiers
+  Map<String, dynamic> _calculateQuotation(Map<String, dynamic> carData) {
+    double carPrice = double.parse(carData['carPrice'].toString());
+    int carYear = int.parse(carData['carYear'].toString());
+    int currentYear = DateTime.now().year;
+    int ageYears = currentYear - carYear;
+    
+    // Calculate depreciation (5% per year, max 50%)
+    double depreciationRate = ageYears * 0.05;
+    if (depreciationRate > 0.5) depreciationRate = 0.5;
+    
+    double currentValue = carPrice * (1 - depreciationRate);
+    
+    // Calculate premium tiers - standard values can be adjusted
+    double basicPremium = currentValue * 0.03;
+    double standardPremium = currentValue * 0.045;
+    double premiumTier = currentValue * 0.06;
+    
+    // Coverage values
+    double basicCoverage = currentValue * 0.7;
+    double standardCoverage = currentValue * 0.85;
+    double premiumCoverage = currentValue;
+    
+    return {
+      'basic': {
+        'name': 'Basic Coverage',
+        'premium': basicPremium.round(),
+        'coverage': basicCoverage.round(),
+        'deductible': (basicPremium * 0.2).round(),
+        'details': ['Third-party liability', 'Basic collision coverage', 'Fire and theft protection']
+      },
+      'standard': {
+        'name': 'Standard Coverage',
+        'premium': standardPremium.round(),
+        'coverage': standardCoverage.round(),
+        'deductible': (standardPremium * 0.15).round(),
+        'details': ['All Basic coverage', 'Comprehensive protection', 'Roadside assistance', 'Rental car coverage']
+      },
+      'premium': {
+        'name': 'Premium Coverage',
+        'premium': premiumTier.round(),
+        'coverage': premiumCoverage.round(),
+        'deductible': (premiumTier * 0.1).round(),
+        'details': ['All Standard coverage', 'Full replacement value', 'Zero depreciation', 'Personal accident cover', 'No-claims bonus protection']
+      }
+    };
+  }
+
+  Future<void> _sendQuotation(String requestId, Map<String, dynamic> quotationData) async {
+    try {
+      // Update the request with quotation data
+      await _firestore.collection('insurance_requests').doc(requestId).update({
+        'status': 'quoted',
+        'quotationData': quotationData,
+        'quotationDate': FieldValue.serverTimestamp(),
+      });
+
+      // Refresh the list
+      await _loadInsuranceRequests();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Quotation sent successfully!'))
+      );
+    } catch (e) {
+      print("Error sending quotation: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sending quotation. Please try again.'))
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          "Insurance Quotations",
+          style: TextStyle(
+            color: accentColor,
+            letterSpacing: .5,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadInsuranceRequests,
+          ),
+        ],
+      ),
+      body: isLoading
+        ? Center(child: CircularProgressIndicator())
+        : insuranceRequests.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.inbox_outlined, size: 60, color: Colors.white60),
+                  SizedBox(height: 16),
+                  Text(
+                    "No pending insurance requests",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              itemCount: insuranceRequests.length,
+              padding: EdgeInsets.all(16.0),
+              itemBuilder: (context, index) {
+                var request = insuranceRequests[index].data() as Map<String, dynamic>;
+                var carData = request['carDetails'] as Map<String, dynamic>;
+                var userData = request['userDetails'] as Map<String, dynamic>;
+                
+                // Format the request date
+                String requestDate = "N/A";
+                if (request['requestDate'] != null) {
+                  Timestamp timestamp = request['requestDate'] as Timestamp;
+                  requestDate = DateFormat('MMM dd, yyyy').format(timestamp.toDate());
+                }
+                
+                return Card(
+                  margin: EdgeInsets.only(bottom: 16.0),
+                  elevation: 2.0,
+                  child: ExpansionTile(
+                    tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    childrenPadding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                    leading: CircleAvatar(
+                      backgroundColor: accentColor,
+                      child: Icon(Icons.directions_car, color: Colors.black),
+                    ),
+                    title: Text(
+                      "${carData['carMake']} ${carData['carModel']} (${carData['carYear']})",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 4),
+                        Text("Requested by: ${userData['name']}"),
+                        Text("Date: $requestDate"),
+                      ],
+                    ),
+                    children: [
+                      // Car Details Section
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Car Details:",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          _buildDetailRow("Make", carData['carMake']),
+                          _buildDetailRow("Model", carData['carModel']),
+                          _buildDetailRow("Year", carData['carYear']),
+                          _buildDetailRow("License Plate", carData['licensePlate']),
+                          _buildDetailRow("Purchase Price", "\$${carData['carPrice']}"),
+                          SizedBox(height: 16),
+                          
+                          // User Details Section
+                          Text(
+                            "User Details:",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          _buildDetailRow("Name", userData['name']),
+                          _buildDetailRow("Email", userData['email']),
+                          _buildDetailRow("Phone", userData['phone']),
+                          _buildDetailRow("Driver's License", userData['driversLicense']),
+                          SizedBox(height: 16),
+                          
+                          // Generate Quote Button
+                          Center(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: accentColor,
+                                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              ),
+                              icon: Icon(Icons.calculate),
+                              label: Text("Generate Quotation"),
+                              onPressed: () {
+                                Map<String, dynamic> quotationData = _calculateQuotation(carData);
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => QuotationDialog(
+                                    carData: carData,
+                                    quotationData: quotationData,
+                                    onSend: () => _sendQuotation(
+                                      insuranceRequests[index].id,
+                                      quotationData,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, dynamic value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              "$label:",
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value?.toString() ?? "N/A",
+              style: TextStyle(
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class QuotationDialog extends StatelessWidget {
+  final Map<String, dynamic> carData;
+  final Map<String, dynamic> quotationData;
+  final VoidCallback onSend;
+
+  const QuotationDialog({
+    super.key,
+    required this.carData,
+    required this.quotationData,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Text(
+                  "Insurance Quotation",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  "${carData['carMake']} ${carData['carModel']} (${carData['carYear']})",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              SizedBox(height: 24),
+              
+              // Basic tier card
+              _buildQuotationTierCard(
+                context,
+                quotationData['basic'],
+                Colors.blue.shade100,
+                Colors.blue,
+              ),
+              SizedBox(height: 16),
+              
+              // Standard tier card  
+              _buildQuotationTierCard(
+                context,
+                quotationData['standard'],
+                Colors.green.shade100,
+                Colors.green,
+              ),
+              SizedBox(height: 16),
+              
+              // Premium tier card
+              _buildQuotationTierCard(
+                context,
+                quotationData['premium'],
+                Colors.purple.shade100,
+                Colors.purple,
+              ),
+              SizedBox(height: 24),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text("Cancel"),
+                  ),
+                  SizedBox(width: 16),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor,
+                    ),
+                    onPressed: () {
+                      onSend();
+                      Navigator.pop(context);
+                    },
+                    child: Text("Send Quotation"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuotationTierCard(
+    BuildContext context,
+    Map<String, dynamic> tierData,
+    Color bgColor,
+    Color accentColor,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentColor.withOpacity(0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.check_circle, color: accentColor),
+                SizedBox(width: 8),
+                Text(
+                  tierData['name'],
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: accentColor,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            
+            _buildQuotationDetailRow("Annual Premium", "\$${tierData['premium']}"),
+            _buildQuotationDetailRow("Coverage Amount", "\$${tierData['coverage']}"),
+            _buildQuotationDetailRow("Deductible", "\$${tierData['deductible']}"),
+            
+            SizedBox(height: 12),
+            Text(
+              "Coverage Details:",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: (tierData['details'] as List).map<Widget>((detail) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("• ", style: TextStyle(fontWeight: FontWeight.bold)),
+                      Expanded(child: Text(detail)),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuotationDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Claims Review Page
+class ClaimsReviewPage extends StatefulWidget {
+  const ClaimsReviewPage({super.key});
+
+  @override
+  State<ClaimsReviewPage> createState() => _ClaimsReviewPageState();
+}
+
+class _ClaimsReviewPageState extends State<ClaimsReviewPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  List<DocumentSnapshot> claims = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadClaims();
+  }
+
+  Future<void> _loadClaims() async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('claims')
+          .where('status', isEqualTo: 'Pending')
+          .orderBy('submissionDate', descending: true)
+          .get();
+
+      setState(() {
+        claims = snapshot.docs;
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error loading claims: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          "Claims Review",
+          style: TextStyle(
+            color: accentColor,
+            letterSpacing: .5,
+          ),
+        ),
+      ),
+      body: Center(
+        child: Text("Claims Review Page - Coming Soon"),
+      ),
+    );
+  }
+}
+
+// User Management Page
+class UserManagementPage extends StatefulWidget {
+  const UserManagementPage({super.key});
+
+  @override
+  State<UserManagementPage> createState() => _UserManagementPageState();
+}
+
+class _UserManagementPageState extends State<UserManagementPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          "User Management",
+          style: TextStyle(
+            color: accentColor,
+            letterSpacing: .5,
+          ),
+        ),
+      ),
+      body: Center(
+        child: Text("User Management Page - Coming Soon"),
+      ),
+    );
+  }
+}
+
+// Insurance Plans Page
+class InsurancePlansPage extends StatefulWidget {
+  const InsurancePlansPage({super.key});
+
+  @override
+  State<InsurancePlansPage> createState() => _InsurancePlansPageState();
+}
+
+class _InsurancePlansPageState extends State<InsurancePlansPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          "Insurance Plans",
+          style: TextStyle(
+            color: accentColor,
+            letterSpacing: .5,
+          ),
+        ),
+      ),
+      body: Center(
+        child: Text("Insurance Plans Page - Coming Soon"),
+      ),
+    );
+  }
+}
+
+// Analytics Page
+class AnalyticsPage extends StatefulWidget {
+  const AnalyticsPage({super.key});
+
+  @override
+  State<AnalyticsPage> createState() => _AnalyticsPageState();
+}
+
+class _AnalyticsPageState extends State<AnalyticsPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          "Analytics",
+          style: TextStyle(
+            color: accentColor,
+            letterSpacing: .5,
+          ),
+        ),
+      ),
+      body: Center(
+        child: Text("Analytics Page - Coming Soon"),
+      ),
+    );
+  }
+}
