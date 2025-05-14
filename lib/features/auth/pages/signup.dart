@@ -1,3 +1,5 @@
+import 'package:car_insurance_app/core/constants.dart';
+import 'package:car_insurance_app/features/admin/ui/admin_dash.dart';
 import 'package:car_insurance_app/features/auth/pages/login.dart';
 import 'package:car_insurance_app/features/vehicles/ui/vehicles_screen.dart';
 import 'package:flutter/material.dart';
@@ -95,7 +97,7 @@ class _SignupPageState extends State<SignupPage> {
         if (selected == "Admin") {
           Navigator.pushReplacement(
             context, 
-            MaterialPageRoute(builder: (context) =>VehiclesScreen())
+            MaterialPageRoute(builder: (context) =>AdminDashboard())
           );
         } else {
           Navigator.pushReplacement(
@@ -124,7 +126,7 @@ class _SignupPageState extends State<SignupPage> {
         title: Text(
           "Sign Up", 
           style: TextStyle(
-            color: const Color.fromARGB(255, 255, 255, 164), 
+            color:accentColor, 
             letterSpacing: .5, 
             fontSize: 30
           ),
@@ -232,11 +234,11 @@ class _SignupPageState extends State<SignupPage> {
                           setState(() {
                             selected = "Admin";
                             if (selected == "Admin") {
-                              admin = const Color.fromARGB(255, 255, 255, 164);
+                              admin =accentColor;
                               Customer = Colors.white;
                             } else {
                               admin = Colors.white;
-                              Customer = const Color.fromARGB(255, 255, 255, 164);
+                              Customer = accentColor;
                             }
                           });
                         }, 
@@ -261,11 +263,11 @@ class _SignupPageState extends State<SignupPage> {
                           setState(() {
                             selected = "Customer";
                             if (selected == "Customer") {
-                              Customer = const Color.fromARGB(255, 255, 255, 164);
+                              Customer = accentColor;
                               admin = Colors.white;
                             } else {
                               Customer = Colors.white;
-                              admin = const Color.fromARGB(255, 255, 255, 164);
+                              admin = accentColor;
                             }
                           });
                         }, 
@@ -306,7 +308,7 @@ class _SignupPageState extends State<SignupPage> {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : signUp,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 255, 255, 164),
+                    backgroundColor:accentColor,
                     foregroundColor: Colors.black,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)

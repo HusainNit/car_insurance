@@ -1,4 +1,6 @@
 
+import 'package:car_insurance_app/core/constants.dart';
+import 'package:car_insurance_app/features/admin/ui/admin_dash.dart';
 import 'package:car_insurance_app/features/auth/pages/signup.dart';
 import 'package:car_insurance_app/features/vehicles/ui/vehicles_screen.dart';
 import 'package:flutter/material.dart';
@@ -62,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
           // Navigate to admin dashboard
           Navigator.pushReplacement(
             context, 
-            MaterialPageRoute(builder: (context) => VehiclesScreen())
+            MaterialPageRoute(builder: (context) => AdminDashboard())
           );
         } else {
           // Navigate to customer home page
@@ -92,7 +94,7 @@ class _LoginPageState extends State<LoginPage> {
         title: Text(
           "Login", 
           style: TextStyle(
-            color: const Color.fromARGB(255, 255, 255, 164), 
+            color:accentColor, 
             letterSpacing: .5, 
             fontSize: 30
           ),
@@ -177,7 +179,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : loginWithEmailAndPassword,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 255, 255, 164),
+                    backgroundColor: accentColor,
                     foregroundColor: Colors.black,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)
