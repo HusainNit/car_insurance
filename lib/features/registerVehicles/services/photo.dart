@@ -8,9 +8,9 @@ class VehiclePhotoPicker extends StatefulWidget {
   final Function(dynamic) onImageSelected;
 
   const VehiclePhotoPicker({
-    Key? key,
+    super.key,
     required this.onImageSelected,
-  }) : super(key: key);
+  });
 
   @override
   _VehiclePhotoPickerState createState() => _VehiclePhotoPickerState();

@@ -8,10 +8,10 @@ class VehicleDetailScreen extends StatelessWidget {
   final String vehicleId;
 
   const VehicleDetailScreen({
-    Key? key,
+    super.key,
     required this.vehicleData,
     required this.vehicleId,
-  }) : super(key: key);
+  });
 
   void _selectOffer(BuildContext context, dynamic policyData, int index) async {
     try {

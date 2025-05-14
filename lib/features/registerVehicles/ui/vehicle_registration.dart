@@ -34,9 +34,9 @@ class _VehicleRegistrationState extends State<VehicleRegistration> {
   final TextEditingController _CarPriceWhenNewController =
       TextEditingController();
   final TextEditingController _CarVINController = TextEditingController();
-  String _insuranceStatus = "Pending";
+  final String _insuranceStatus = "Pending";
   String _insuranceType = "newInsurance";
-  String _ownerID = ""; // at login
+  final String _ownerID = ""; // at login
   dynamic _imageFile;
   String? _photoUrl;
 
@@ -288,8 +288,9 @@ class _VehicleRegistrationState extends State<VehicleRegistration> {
                   _NumberOfPassengersController,
                   keyboardType: TextInputType.number,
                   validator: (value) {
-                    if (value?.isEmpty ?? true)
+                    if (value?.isEmpty ?? true) {
                       return 'Number of passengers is required';
+                    }
                     final passengers = int.tryParse(value!);
                     if (passengers == null ||
                         passengers <= 0 ||
@@ -321,8 +322,9 @@ class _VehicleRegistrationState extends State<VehicleRegistration> {
                   _VehicleManufacturingYearController,
                   keyboardType: TextInputType.number,
                   validator: (value) {
-                    if (value?.isEmpty ?? true)
+                    if (value?.isEmpty ?? true) {
                       return 'Manufacturing year is required';
+                    }
                     final year = int.tryParse(value!);
                     final currentYear = DateTime.now().year;
                     if (year == null || year < 1900 || year > currentYear + 1) {
@@ -369,7 +371,7 @@ class _VehicleRegistrationState extends State<VehicleRegistration> {
                 customFilledButton(
                   'Register Vehicle',
                   () async {
-                    if (await _formKey.currentState!.validate()) {
+                    if (_formKey.currentState!.validate()) {
                       sendDataToDB();
                     }
                   },

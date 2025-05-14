@@ -1,4 +1,5 @@
 // lib/main.dart
+import 'package:car_insurance_app/features/auth/pages/login.dart';
 import 'package:car_insurance_app/features/registerVehicles/ui/vehicle_registration.dart';
 import 'package:flutter/material.dart';
 import 'core/firebase_config.dart';
@@ -23,8 +24,9 @@ class ClaimsApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Car Insurance Claims',
       theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: bgColor),
-      initialRoute: '/vehicles',
+      initialRoute: '/login',
       routes: {
+        '/login': (_) => const LoginPage(), 
         '/vehicles': (_) => const VehiclesScreen(),
         '/registerVehicles': (_) => const VehicleRegistration(),
         '/claims': (_) => const ClaimsOverviewScreen(),
