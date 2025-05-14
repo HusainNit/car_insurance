@@ -180,13 +180,13 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: isLoading ? null : loginWithEmailAndPassword,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accentColor,
-                    foregroundColor: Colors.black,
+                    foregroundColor: bgColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)
                     )
                   ),
                   child: isLoading 
-                    ? CircularProgressIndicator(color: Colors.black)
+                    ? CircularProgressIndicator(color: bgColor)
                     : Text(
                         "Login", 
                         style: TextStyle(

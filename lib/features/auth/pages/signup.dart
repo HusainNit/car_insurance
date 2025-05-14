@@ -309,13 +309,13 @@ class _SignupPageState extends State<SignupPage> {
                   onPressed: isLoading ? null : signUp,
                   style: ElevatedButton.styleFrom(
                     backgroundColor:accentColor,
-                    foregroundColor: Colors.black,
+                    foregroundColor:bgColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)
                     )
                   ),
                   child: isLoading 
-                    ? CircularProgressIndicator(color: Colors.black)
+                    ? CircularProgressIndicator(color:bgColor)
                     : Text(
                         "Sign Up", 
                         style: TextStyle(

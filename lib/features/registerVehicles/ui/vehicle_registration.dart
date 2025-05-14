@@ -1,13 +1,9 @@
-import 'dart:io';
-import 'dart:math';
 import 'package:car_insurance_app/core/constants.dart';
 import 'package:car_insurance_app/core/widgets/ui_helpers.dart';
 import 'package:car_insurance_app/core/widgets/main_scaffold.dart';
 import 'package:car_insurance_app/features/registerVehicles/services/photo.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:car_insurance_app/utils/cloudinary_helper.dart';
 

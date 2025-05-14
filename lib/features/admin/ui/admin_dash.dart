@@ -1,9 +1,10 @@
 import 'package:car_insurance_app/core/constants.dart';
+import 'package:car_insurance_app/core/widgets/ui_helpers.dart';
 import 'package:car_insurance_app/features/auth/pages/login.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:car_insurance_app/features/admin/ui/review_claims_screen.dart';
 
 
 class AdminDashboard extends StatefulWidget {
@@ -21,6 +22,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int pendingClaims = 0;
   int totalUsers = 0;
   int activePolicies = 0;
+  int pendingQuotations = 0;
   bool isLoading = true;
 
   @override
@@ -56,7 +58,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       // Get pending claims count
       QuerySnapshot claimsSnapshot = await _firestore
           .collection('claims')
-          .where('status', isEqualTo: 'pending')
+          .where('status', isEqualTo: 'Pending')
           .get();
       
       // Get total users count (only customers)
@@ -71,10 +73,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
           .where('status', isEqualTo: 'active')
           .get();
 
+      // Get pending quotations count
+      QuerySnapshot quotationsSnapshot = await _firestore
+          .collection('InsuranceReq')
+          .where('adminApproval', isEqualTo: false)
+          .get();
+
       setState(() {
         pendingClaims = claimsSnapshot.docs.length;
         totalUsers = usersSnapshot.docs.length;
         activePolicies = policiesSnapshot.docs.length;
+        pendingQuotations = quotationsSnapshot.docs.length;
         isLoading = false;
       });
     } catch (e) {
@@ -102,7 +111,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         title: Text(
           "Admin Dashboard", 
           style: TextStyle(
-            color:accentColor,
+            color: accentColor,
             letterSpacing: .5,
             fontSize: 24
           ),
@@ -133,7 +142,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       children: [
                         CircleAvatar(
                           radius: 30,
-                          backgroundColor:accentColor,
+                          backgroundColor: accentColor,
                           child: Icon(Icons.admin_panel_settings, size: 35, color: Colors.black),
                         ),
                         SizedBox(width: 20),
@@ -182,6 +191,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     childAspectRatio: 1.5,
                     children: [
                       _buildStatCard(
+                        "Pending Quotations",
+                        pendingQuotations.toString(),
+                        Icons.request_quote,
+                        Colors.red,
+                      ),
+                      _buildStatCard(
                         "Pending Claims",
                         pendingClaims.toString(),
                         Icons.report_problem,
@@ -198,12 +213,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         activePolicies.toString(),
                         Icons.policy,
                         Colors.green,
-                      ),
-                      _buildStatCard(
-                        "Revenue",
-                        "\$12,450",
-                        Icons.attach_money,
-                        Colors.purple,
                       ),
                     ],
                   ),
@@ -222,13 +231,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   SizedBox(height: 15),
                   
                   _buildActionCard(
-                    "Manage Users",
-                    "View and manage customer accounts",
-                    Icons.people_outline,
+                    "Insurance Quotations",
+                    "Review and process insurance requests",
+                    Icons.calculate_outlined,
                     () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => LoginPage()),
+                        MaterialPageRoute(builder: (context) => InsuranceQuotationsPage()),
                       );
                     },
                   ),
@@ -236,13 +245,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   SizedBox(height: 15),
                   
                   _buildActionCard(
-                    "Review Claims",
-                    "Process pending insurance claims",
+                    "Review Offers ",
+                    "Process pending insurance offers ",
                     Icons.assignment_outlined,
                     () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => LoginPage()),
+                        MaterialPageRoute(builder: (context) => ReviewOffersPage()),
                       );
                     },
                   ),
@@ -250,30 +259,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   SizedBox(height: 15),
                   
                   _buildActionCard(
-                    "Insurance Plans",
-                    "Manage available insurance plans",
-                    Icons.description_outlined,
+                    "Approve Insurance Policy",
+                    "Complete Insurance Request and Approve Inusrance Policy",
+                    Icons.people_outline,
                     () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => LoginPage()),
+                        MaterialPageRoute(builder: (context) => InusrancePolicy()),
                       );
                     },
                   ),
                   
                   SizedBox(height: 15),
-                  
+
                   _buildActionCard(
-                    "Analytics",
-                    "View detailed business analytics",
-                    Icons.analytics_outlined,
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginPage()),
-                      );
-                    },
-                  ),
+                      "Review Claims",
+                      "Process pending insurance claims",
+                      Icons.assignment_outlined,
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ReviewClaimsScreen()),
+                        );
+                      },
+                    ),
+                  SizedBox(height: 15),
+                  
+                 
                 ],
               ),
             ),
@@ -329,7 +342,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: ListTile(
         contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor:accentColor,
+          backgroundColor: accentColor,
           child: Icon(icon, color: Colors.black),
         ),
         title: Text(
@@ -363,19 +376,23 @@ class InsuranceQuotationsPage extends StatefulWidget {
 class _InsuranceQuotationsPageState extends State<InsuranceQuotationsPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<DocumentSnapshot> insuranceRequests = [];
+  List<DocumentSnapshot> vehicleDetails = [];
   bool isLoading = true;
+ 
+
 
   @override
   void initState() {
     super.initState();
     _loadInsuranceRequests();
+     _vehicleDetails();
   }
 
   Future<void> _loadInsuranceRequests() async {
     try {
       QuerySnapshot snapshot = await _firestore
           .collection('InsuranceReq')
-          .where('adminApproval', isEqualTo: false)
+          .where('insuranceStatus', isEqualTo: "Requested")
           .get();
 
       setState(() {
@@ -389,77 +406,58 @@ class _InsuranceQuotationsPageState extends State<InsuranceQuotationsPage> {
       });
     }
   }
-
-  // Calculate quotation based on car price, depreciation, and offer tiers
-  Map<String, dynamic> _calculateQuotation(Map<String, dynamic> carData) {
-    double carPrice = double.parse(carData['carPrice'].toString());
-    int carYear = int.parse(carData['carYear'].toString());
-    int currentYear = DateTime.now().year;
-    int ageYears = currentYear - carYear;
-    
-    // Calculate depreciation (5% per year, max 50%)
-    double depreciationRate = ageYears * 0.05;
-    if (depreciationRate > 0.5) depreciationRate = 0.5;
-    
-    double currentValue = carPrice * (1 - depreciationRate);
-    
-    // Calculate premium tiers - standard values can be adjusted
-    double basicPremium = currentValue * 0.03;
-    double standardPremium = currentValue * 0.045;
-    double premiumTier = currentValue * 0.06;
-    
-    // Coverage values
-    double basicCoverage = currentValue * 0.7;
-    double standardCoverage = currentValue * 0.85;
-    double premiumCoverage = currentValue;
-    
-    return {
-      'basic': {
-        'name': 'Basic Coverage',
-        'premium': basicPremium.round(),
-        'coverage': basicCoverage.round(),
-        'deductible': (basicPremium * 0.2).round(),
-        'details': ['Third-party liability', 'Basic collision coverage', 'Fire and theft protection']
-      },
-      'standard': {
-        'name': 'Standard Coverage',
-        'premium': standardPremium.round(),
-        'coverage': standardCoverage.round(),
-        'deductible': (standardPremium * 0.15).round(),
-        'details': ['All Basic coverage', 'Comprehensive protection', 'Roadside assistance', 'Rental car coverage']
-      },
-      'premium': {
-        'name': 'Premium Coverage',
-        'premium': premiumTier.round(),
-        'coverage': premiumCoverage.round(),
-        'deductible': (premiumTier * 0.1).round(),
-        'details': ['All Standard coverage', 'Full replacement value', 'Zero depreciation', 'Personal accident cover', 'No-claims bonus protection']
-      }
-    };
-  }
-
-  Future<void> _sendQuotation(String requestId, Map<String, dynamic> quotationData) async {
+  Future<void> _vehicleDetails() async {
     try {
-      // Update the request with quotation data
-      await _firestore.collection('insurance_requests').doc(requestId).update({
-        'status': 'quoted',
-        'quotationData': quotationData,
-        'quotationDate': FieldValue.serverTimestamp(),
-      });
+      QuerySnapshot snapshot = await _firestore
+          .collection('vehicles')
+          .get();
 
-      // Refresh the list
-      await _loadInsuranceRequests();
+      setState(() {
+        vehicleDetails = snapshot.docs;
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Quotation sent successfully!'))
-      );
+      });
     } catch (e) {
-      print("Error sending quotation: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sending quotation. Please try again.'))
-      );
+      print(e);
+      
     }
   }
+
+
+
+ offer(double amount) {
+
+    double luxury = amount* 1.3;
+    double premium = amount*1.1;  
+    
+    String offers = " Luxury Option: ${luxury.toStringAsFixed(1)}  \n Premium Option: ${premium.toStringAsFixed(1)}  \n Standard Option: ${amount.toStringAsFixed(1)}";
+
+    return offers; 
+
+ }
+
+   offerCustomer(String docId ,double amount ) async {
+    final DocumentReference docRef;
+  docRef =
+      FirebaseFirestore.instance.collection("InsuranceReq").doc(docId);
+    try {
+      await docRef.update({
+      "insuranceStatus": "Offering",
+      "insuranceOffers" : ["Luxury Option:  ${(amount*1.3).toStringAsFixed(1)}","Premium Option:  ${(amount*1.1).toStringAsFixed(1)}","Standard Option:  ${(amount*1).toStringAsFixed(1)}"]
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Offer Submitted ! " , style: TextStyle(color: Colors.white),), backgroundColor: Colors.greenAccent,)  );
+      
+    } catch (e) {
+      print("$e");
+     
+      
+    }
+  }
+
+
+
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -502,16 +500,7 @@ class _InsuranceQuotationsPageState extends State<InsuranceQuotationsPage> {
               itemCount: insuranceRequests.length,
               padding: EdgeInsets.all(16.0),
               itemBuilder: (context, index) {
-                var request = insuranceRequests[index].data() as Map<String, dynamic>;
-                var carData = request['carDetails'] as Map<String, dynamic>;
-                var userData = request['userDetails'] as Map<String, dynamic>;
-                
-                // Format the request date
-                String requestDate = "N/A";
-                if (request['requestDate'] != null) {
-                  Timestamp timestamp = request['requestDate'] as Timestamp;
-                  requestDate = DateFormat('MMM dd, yyyy').format(timestamp.toDate());
-                }
+              
                 
                 return Card(
                   margin: EdgeInsets.only(bottom: 16.0),
@@ -523,80 +512,50 @@ class _InsuranceQuotationsPageState extends State<InsuranceQuotationsPage> {
                       backgroundColor: accentColor,
                       child: Icon(Icons.directions_car, color: Colors.black),
                     ),
-                    title: Text(
-                      "${carData['carMake']} ${carData['carModel']} (${carData['carYear']})",
+                    title: Text("${insuranceRequests[index]['carModel']} - ${insuranceRequests[index]['registrationNumber']}",
+                      
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: 4),
-                        Text("Requested by: ${userData['name']}"),
-                        Text("Date: $requestDate"),
-                      ],
-                    ),
+                    
                     children: [
                       // Car Details Section
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Car Details:",
+                            "Inusurance Cost:",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
-                          ),
-                          SizedBox(height: 8),
-                          _buildDetailRow("Make", carData['carMake']),
-                          _buildDetailRow("Model", carData['carModel']),
-                          _buildDetailRow("Year", carData['carYear']),
-                          _buildDetailRow("License Plate", carData['licensePlate']),
-                          _buildDetailRow("Purchase Price", "\$${carData['carPrice']}"),
-                          SizedBox(height: 16),
                           
-                          // User Details Section
-                          Text(
-                            "User Details:",
-                            style: TextStyle(
+                          ),
+                      
+                        Text(" ${insuranceRequests[index]['insuranceCost']}BD"),
+                        Text(""),
+                        Text("Insurance Offers: ", 
+                              style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          _buildDetailRow("Name", userData['name']),
-                          _buildDetailRow("Email", userData['email']),
-                          _buildDetailRow("Phone", userData['phone']),
-                          _buildDetailRow("Driver's License", userData['driversLicense']),
-                          SizedBox(height: 16),
+                              fontSize: 16,)),
+
+                        Text(offer(insuranceRequests[index]['insuranceCost'])),
+                        Text(""),
+
+
                           
-                          // Generate Quote Button
-                          Center(
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: accentColor,
-                                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              ),
-                              icon: Icon(Icons.calculate),
-                              label: Text("Generate Quotation"),
-                              onPressed: () {
-                                Map<String, dynamic> quotationData = _calculateQuotation(carData);
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => QuotationDialog(
-                                    carData: carData,
-                                    quotationData: quotationData,
-                                    onSend: () => _sendQuotation(
-                                      insuranceRequests[index].id,
-                                      quotationData,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+
+                          customFilledButton("Offer", (){
+
+
+                            offerCustomer(insuranceRequests[index].id, insuranceRequests[index]['insuranceCost']);
+                            
+                            _loadInsuranceRequests();
+
+
+                          })
+                         
                         ],
                       ),
                     ],
@@ -635,332 +594,333 @@ class _InsuranceQuotationsPageState extends State<InsuranceQuotationsPage> {
   }
 }
 
-class QuotationDialog extends StatelessWidget {
-  final Map<String, dynamic> carData;
-  final Map<String, dynamic> quotationData;
-  final VoidCallback onSend;
 
-  const QuotationDialog({
-    super.key,
-    required this.carData,
-    required this.quotationData,
-    required this.onSend,
-  });
+
+
+//  Review Offers Page
+class ReviewOffersPage extends StatefulWidget {
+  const ReviewOffersPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Text(
-                  "Insurance Quotation",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Center(
-                child: Text(
-                  "${carData['carMake']} ${carData['carModel']} (${carData['carYear']})",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-              SizedBox(height: 24),
-              
-              // Basic tier card
-              _buildQuotationTierCard(
-                context,
-                quotationData['basic'],
-                Colors.blue.shade100,
-                Colors.blue,
-              ),
-              SizedBox(height: 16),
-              
-              // Standard tier card  
-              _buildQuotationTierCard(
-                context,
-                quotationData['standard'],
-                Colors.green.shade100,
-                Colors.green,
-              ),
-              SizedBox(height: 16),
-              
-              // Premium tier card
-              _buildQuotationTierCard(
-                context,
-                quotationData['premium'],
-                Colors.purple.shade100,
-                Colors.purple,
-              ),
-              SizedBox(height: 24),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text("Cancel"),
-                  ),
-                  SizedBox(width: 16),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accentColor,
-                    ),
-                    onPressed: () {
-                      onSend();
-                      Navigator.pop(context);
-                    },
-                    child: Text("Send Quotation"),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuotationTierCard(
-    BuildContext context,
-    Map<String, dynamic> tierData,
-    Color bgColor,
-    Color accentColor,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accentColor.withOpacity(0.5)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.check_circle, color: accentColor),
-                SizedBox(width: 8),
-                Text(
-                  tierData['name'],
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: accentColor,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            
-            _buildQuotationDetailRow("Annual Premium", "\$${tierData['premium']}"),
-            _buildQuotationDetailRow("Coverage Amount", "\$${tierData['coverage']}"),
-            _buildQuotationDetailRow("Deductible", "\$${tierData['deductible']}"),
-            
-            SizedBox(height: 12),
-            Text(
-              "Coverage Details:",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: (tierData['details'] as List).map<Widget>((detail) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 4.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("• ", style: TextStyle(fontWeight: FontWeight.bold)),
-                      Expanded(child: Text(detail)),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuotationDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<ReviewOffersPage> createState() => _ReviewOffersPageState();
 }
 
-// Claims Review Page
-class ClaimsReviewPage extends StatefulWidget {
-  const ClaimsReviewPage({super.key});
-
-  @override
-  State<ClaimsReviewPage> createState() => _ClaimsReviewPageState();
-}
-
-class _ClaimsReviewPageState extends State<ClaimsReviewPage> {
+class _ReviewOffersPageState extends State<ReviewOffersPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  List<DocumentSnapshot> claims = [];
+  List<DocumentSnapshot> OffersReview = [];
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadClaims();
+    _loadOfferReviews();
   }
 
-  Future<void> _loadClaims() async {
+  
+  Future<void> _loadOfferReviews() async {
     try {
       QuerySnapshot snapshot = await _firestore
-          .collection('claims')
-          .where('status', isEqualTo: 'Pending')
-          .orderBy('submissionDate', descending: true)
+          .collection('InsuranceReq')
+          .where('insuranceStatus', isEqualTo: "Review")
           .get();
 
       setState(() {
-        claims = snapshot.docs;
+        OffersReview = snapshot.docs;
         isLoading = false;
       });
     } catch (e) {
-      print("Error loading claims: $e");
+      print(" $e");
       setState(() {
         isLoading = false;
       });
     }
   }
 
+
+ unPaid(String docId) async {
+    final DocumentReference docRef;
+  docRef =
+      FirebaseFirestore.instance.collection("InsuranceReq").doc(docId);
+    try {
+      await docRef.update({
+      "insuranceStatus": "Unpaid"
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Payment Requested ! " , style: TextStyle(color: Colors.white),), backgroundColor: Colors.greenAccent,)  );
+      
+    } catch (e) {
+      print("$e");
+     
+      
+    }
+  }
+
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Claims Review",
+          "Review Offers",
           style: TextStyle(
             color: accentColor,
             letterSpacing: .5,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadOfferReviews,
+          ),
+        ],
       ),
-      body: Center(
-        child: Text("Claims Review Page - Coming Soon"),
-      ),
+      body: isLoading
+        ? Center(child: CircularProgressIndicator())
+        : OffersReview.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.inbox_outlined, size: 60, color: Colors.white60),
+                  SizedBox(height: 16),
+                  Text(
+                    "No pending Offer Reviews",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              itemCount: OffersReview.length,
+              padding: EdgeInsets.all(16.0),
+              itemBuilder: (context, index) {
+              
+                
+                return Card(
+                  margin: EdgeInsets.only(bottom: 16.0),
+                  elevation: 2.0,
+                  child: ExpansionTile(
+                    tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    childrenPadding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                    leading: CircleAvatar(
+                      backgroundColor: accentColor,
+                      child: Icon(Icons.directions_car, color: Colors.black),
+                    ),
+                    title: Text("${OffersReview[index]['carModel']} - ${OffersReview[index]['registrationNumber']}",
+                      
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    
+                    children: [
+                      // Car Details Section
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Inusurance Cost:",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          
+                          ),
+                      
+                        Text(" ${OffersReview[index]['insuranceCost']}BD"),
+                        Text(""),
+                        Text("Offer Selected: ", 
+                              style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,)),
+
+                        Text(" ${OffersReview[index]['selectedOffer']}"),
+                        Text(""),
+
+
+                          
+
+                          customFilledButton("Request Payment", (){
+                            unPaid(OffersReview[index].id);
+                            _loadOfferReviews();
+                            
+
+
+                          })
+                         
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
     );
   }
 }
 
 // User Management Page
-class UserManagementPage extends StatefulWidget {
-  const UserManagementPage({super.key});
+class InusrancePolicy extends StatefulWidget {
+  const InusrancePolicy({super.key});
 
   @override
-  State<UserManagementPage> createState() => _UserManagementPageState();
+  State<InusrancePolicy> createState() => _InusrancePolicyState();
 }
 
-class _UserManagementPageState extends State<UserManagementPage> {
+class _InusrancePolicyState extends State<InusrancePolicy> {
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  List<DocumentSnapshot> PaidReview = [];
+  bool isLoading = true;
+
   @override
+  void initState() {
+    super.initState();
+    _loadPaidReviews();
+  }
+
+  
+  Future<void> _loadPaidReviews() async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('InsuranceReq')
+          .where('insuranceStatus', isEqualTo: "Paid")
+          .get();
+
+      setState(() {
+        PaidReview = snapshot.docs;
+        isLoading = false;
+      });
+    } catch (e) {
+      print(" $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  approvePolicy(String docId) async {
+    final DocumentReference docRef;
+  docRef =
+      FirebaseFirestore.instance.collection("InsuranceReq").doc(docId);
+    try {
+      await docRef.update({
+      "insuranceStatus": "Approved"
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Policy Approved ! " , style: TextStyle(color: Colors.white),), backgroundColor: Colors.greenAccent,)  );
+      
+    } catch (e) {
+      print("$e");
+     
+      
+    }
+  }
+
+  
+
+
+
+   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "User Management",
+          "Insurance Policy Review",
           style: TextStyle(
             color: accentColor,
             letterSpacing: .5,
           ),
         ),
-      ),
-      body: Center(
-        child: Text("User Management Page - Coming Soon"),
-      ),
-    );
-  }
-}
-
-// Insurance Plans Page
-class InsurancePlansPage extends StatefulWidget {
-  const InsurancePlansPage({super.key});
-
-  @override
-  State<InsurancePlansPage> createState() => _InsurancePlansPageState();
-}
-
-class _InsurancePlansPageState extends State<InsurancePlansPage> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "Insurance Plans",
-          style: TextStyle(
-            color: accentColor,
-            letterSpacing: .5,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadPaidReviews,
           ),
-        ),
+        ],
       ),
-      body: Center(
-        child: Text("Insurance Plans Page - Coming Soon"),
-      ),
+      body: isLoading
+        ? Center(child: CircularProgressIndicator())
+        : PaidReview.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.inbox_outlined, size: 60, color: Colors.white60),
+                  SizedBox(height: 16),
+                  Text(
+                    "No pending Paid Reviews",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              itemCount: PaidReview.length,
+              padding: EdgeInsets.all(16.0),
+              itemBuilder: (context, index) {
+              
+                
+                return Card(
+                  margin: EdgeInsets.only(bottom: 16.0),
+                  elevation: 2.0,
+                  child: ExpansionTile(
+                    tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    childrenPadding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                    leading: CircleAvatar(
+                      backgroundColor: accentColor,
+                      child: Icon(Icons.directions_car, color: Colors.black),
+                    ),
+                    title: Text("${PaidReview[index]['carModel']} - ${PaidReview[index]['registrationNumber']}",
+                      
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    
+                    children: [
+                      // Car Details Section
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          
+                        Text("Offer Selected: ", 
+                              style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,)),
+
+                        Text(" ${PaidReview[index]['selectedOffer']}"),
+                          
+                        Text(""),
+                        Text(" Payment Completed", 
+                              style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,)),
+                        Text(""),
+
+                        
+                          
+
+                          customFilledButton("Approve Policy", (){
+
+
+
+                          })
+                         
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
     );
   }
 }
 
-// Analytics Page
-class AnalyticsPage extends StatefulWidget {
-  const AnalyticsPage({super.key});
-
-  @override
-  State<AnalyticsPage> createState() => _AnalyticsPageState();
-}
-
-class _AnalyticsPageState extends State<AnalyticsPage> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "Analytics",
-          style: TextStyle(
-            color: accentColor,
-            letterSpacing: .5,
-          ),
-        ),
-      ),
-      body: Center(
-        child: Text("Analytics Page - Coming Soon"),
-      ),
-    );
-  }
-}
