@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/widgets/ui_helpers.dart';
-import '../../../core/constants.dart';
 
 class SubmitScreen extends StatelessWidget {
   final DocumentReference<Map<String, dynamic>> claimDoc;
