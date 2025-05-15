@@ -108,7 +108,7 @@ class VehicleDetailScreen extends StatelessWidget {
 
               if (insuranceData == null) {
                 return customFilledButton(
-                  'Request Insurance',
+                  vehicleData['insured'] ? 'Renew Insurance' : 'Request Insurance' ,
                   () => Navigator.push(
                     context,
                     MaterialPageRoute(

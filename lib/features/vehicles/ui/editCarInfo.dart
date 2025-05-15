@@ -86,6 +86,8 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
         'driverAge': driverAgeController.text,
         'vin': chassisController.text,
         'updatedAt': DateTime.now(),
+        'insured': true,
+        
       });
 
       Navigator.pop(context); // Dismiss loading

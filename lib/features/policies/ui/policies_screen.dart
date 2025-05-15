@@ -57,7 +57,7 @@ class _PoliciesScreenState extends State<PoliciesScreen> {
     final vinMap = {
       for (var d in vehicles.docs)
         (d['vin'] as String).toLowerCase():
-            (d['registrationNum'] as String).toUpperCase(),
+            (d['registrationNumber'] as String).toUpperCase(),
     };
 
     final curr = <Map<String, dynamic>>[];
