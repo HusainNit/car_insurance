@@ -70,11 +70,7 @@ class _InsuranceRequestScreenState extends State<InsuranceRequestScreen> {
         'requestDate': DateTime.now(),
         "userId": user?.uid ?? "",
         'insuranceOffers': [],
-        // 'policyDetails': {
-        //   'policyNum': policyNumber,
-        //   'startDate': DateTime.now().toString(),
-        //   'endDate': DateTime.now().add(const Duration(days: 365)).toString(),
-        // }
+         
       });
 
       Navigator.pop(context);

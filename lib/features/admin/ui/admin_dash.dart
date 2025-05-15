@@ -539,7 +539,7 @@ class _InsuranceQuotationsPageState extends State<InsuranceQuotationsPage> {
                           
                           ),
                       
-                        Text(" ${insuranceRequests[index]['insuranceCost']}BD"),
+                        Text(" ${(insuranceRequests[index]['insuranceCost']).toStringAsFixed(1)}BD"),
                         Text(""),
                         Text("Insurance Offers: ", 
                               style: TextStyle(

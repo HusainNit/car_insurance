@@ -43,6 +43,8 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
         TextEditingController(text: widget.vehicleData['passengersNum']);
     driverAgeController =
         TextEditingController(text: widget.vehicleData['driverAge']);
+    chassisController =
+        TextEditingController(text: widget.vehicleData['vin']);
   }
 
   @override
@@ -82,6 +84,7 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
         'priceWhenNew': priceWhenNewController.text,
         'passengersNum': passengersNumController.text,
         'driverAge': driverAgeController.text,
+        'vin': chassisController.text,
         'updatedAt': DateTime.now(),
       });
 

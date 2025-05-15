@@ -9,14 +9,42 @@ class VehicleDetailScreen extends StatelessWidget {
   final Map<String, dynamic> vehicleData;
   final String vehicleId;
 
-  const VehicleDetailScreen({
+   VehicleDetailScreen({
     Key? key,
     required this.vehicleData,
     required this.vehicleId,
   }) : super(key: key);
 
+
+
+/*
+  Future<String> _selectedOffer(String vin) async {
+    try {
+      
+        QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('InsuranceReq')
+          .where('vehicleId', isEqualTo: vin)
+          .get();
+          if (snapshot.docs.isNotEmpty) {
+            return snapshot.docs[0]['selectedOffer'].data();
+            
+          } else {
+            return 'Error fetching selected offer';
+          }
+
+    } catch (e) {
+      print(' $e');
+      return 'Error fetching selected offer';
+    }
+  }
+
+  */
+
+
+ 
   @override
   Widget build(BuildContext context) {
+    
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -58,6 +86,9 @@ class VehicleDetailScreen extends StatelessWidget {
                 vehicleData['insured'] ? "renewal" : "new insurance"),
             infoRow('Passengers:', vehicleData['passengersNum'] ?? 'N/A'),
             infoRow('Driver Age:', vehicleData['driverAge'] ?? 'N/A'),
+            
+         //   Text(_selectedOffer(vehicleData['vin'])),
+            
           ]),
           const SizedBox(height: 24),
           StreamBuilder<QuerySnapshot>(
@@ -90,30 +121,7 @@ class VehicleDetailScreen extends StatelessWidget {
                 );
               }
 
-              // if (insuranceData['selectedOffer'] != '') {
-              //   return Container(
-              //     padding: const EdgeInsets.all(16),
-              //     decoration: BoxDecoration(
-              //       color: const Color(0xFF282828),
-              //       borderRadius: BorderRadius.circular(8),
-              //       border: Border.all(color: accentColor),
-              //     ),
-              //     child: const Column(
-              //       children: [
-              //         Icon(Icons.check_circle, color: accentColor, size: 48),
-              //         SizedBox(height: 12),
-              //         Text(
-              //           'Thank you for using our service!',
-              //           style: TextStyle(
-              //               color: Colors.white,
-              //               fontSize: 18,
-              //               fontWeight: FontWeight.bold),
-              //           textAlign: TextAlign.center,
-              //         ),
-              //       ],
-              //     ),
-              //   );
-              // }
+             
 
               if (insuranceData['insuranceStatus'] == 'Offering') {
                 return customFilledButton(
@@ -129,6 +137,30 @@ class VehicleDetailScreen extends StatelessWidget {
                 );
               }
               if (insuranceData['insuranceStatus'] == 'Paid') {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF282828),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: accentColor),
+                  ),
+                  child: const Column(
+                    children: [
+                      Icon(Icons.check_circle, color: accentColor, size: 48),
+                      SizedBox(height: 12),
+                      Text(
+                        'Thank you for using our service!',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                );
+              }
+              if (insuranceData['insuranceStatus'] == 'Approved') {
                 return Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
