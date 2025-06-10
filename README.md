@@ -84,7 +84,23 @@ Make sure you have Flutter SDK installed and set up. If not, follow the [Flutter
 
 ## 📸 Screenshots
 
-> Include 10–20 screenshots of each core functionality when the app is ready.
+<img src="./images/screenShots/s1.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s2.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s3.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s5.png" style="width: 00px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s6.png" style="width: 350px; height: auto;display: inline-block; margin: 0 auto;">
+
+<img src="./images/screenShots/s8.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s9.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s10.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s11.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s12.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s13.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s14.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s15.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s16.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+<img src="./images/screenShots/s17.png" style="width: 300px; height: auto;display: inline-block; margin: 0 auto;">
+
 
 ---
 
